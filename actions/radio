@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. /etc/acpi/actions/osd
+
+if [ -n `ifconfig | grep wlan0` ]; then
+	sudo ifconfig wlan0 up
+	osd "Wireless On"
+
+else
+	sudo ifconfig wlan0 down
+	osd "Wireless Off"
+fi

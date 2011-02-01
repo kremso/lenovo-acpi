@@ -1,0 +1,154 @@
+#!/bin/bash
+# From: http://www.thinkwiki.org/wiki/Sample_Fn-F7_script
+#
+# External output may be "VGA" or "VGA-0" or "DVI-0" or "TMDS-1"
+EXTERNAL_OUTPUT="VGA1"
+INTERNAL_OUTPUT="LVDS1"
+# EXTERNAL_LOCATION may be one of: left, right, above, or below
+EXTERNAL_LOCATION="right"
+ 
+case "$EXTERNAL_LOCATION" in
+       left|LEFT)
+               EXTERNAL_LOCATION="--left-of $INTERNAL_OUTPUT"
+               ;;
+       right|RIGHT)
+               EXTERNAL_LOCATION="--right-of $INTERNAL_OUTPUT"
+               ;;
+       top|TOP|above|ABOVE)
+               EXTERNAL_LOCATION="--above $INTERNAL_OUTPUT"
+               ;;
+       bottom|BOTTOM|below|BELOW)
+               EXTERNAL_LOCATION="--below $INTERNAL_OUTPUT"
+               ;;
+       *)
+               EXTERNAL_LOCATION="--left-of $INTERNAL_OUTPUT"
+               ;;
+esac
+ 
+function screen_external(){
+       xrandr --output $INTERNAL_OUTPUT --off
+       xrandr --output $EXTERNAL_OUTPUT --auto
+}
+ 
+function screen_internal(){
+       xrandr --output $EXTERNAL_OUTPUT --off
+       xrandr --output $INTERNAL_OUTPUT --auto
+}
+ 
+function screen_mirror(){
+       xrandr --output $INTERNAL_OUTPUT --auto
+       xrandr --output $EXTERNAL_OUTPUT --auto --same-as $INTERNAL_OUTPUT
+}
+ 
+function screen_both(){
+       xrandr --output $INTERNAL_OUTPUT --auto
+       xrandr --output $EXTERNAL_OUTPUT --auto $EXTERNAL_LOCATION
+}
+ 
+function screen_toggle(){
+       # Figure out current state
+       INTERNAL_STATE=$(xrandr | grep $INTERNAL_OUTPUT | grep con | sed "s/.*connected //" | sed "s/(.*//")
+       EXTERNAL_STATE=$(xrandr | grep $EXTERNAL_OUTPUT | grep con | sed "s/.*connected //" | sed "s/(.*//")
+ 
+       if [ -z "$INTERNAL_STATE" ]; then
+         STATE="external"
+       elif [ -z "$EXTERNAL_STATE" ]; then
+         STATE="internal"
+       else
+         INTERNAL_STATE=$(echo $INTERNAL_STATE | sed "s/[0-9]*x[0-9]*//")
+         EXTERNAL_STATE=$(echo $EXTERNAL_STATE | sed "s/[0-9]*x[0-9]*//")
+         if [ "$INTERNAL_STATE" = "$EXTERNAL_STATE" ]; then
+           STATE="mirror"
+         else
+           STATE="both"
+         fi
+       fi
+ 
+       case "$STATE" in
+               internal)
+                       screen_mirror
+                       ;;
+               mirror)
+                       screen_external
+                       ;;
+               external)
+                       screen_both
+                       ;;
+               both)
+                       screen_internal
+                       ;;
+               *)
+                       screen_internal
+                       ;;
+       esac
+}
+ 
+# based on /etc/acpi/screenblank.sh (Ubuntu 7.10)
+# . /usr/share/acpi-support/power-funcs         # for getXuser
+getXuser() {
+       user=`finger| grep -m1 ":$displaynum " | awk '{print $1}'`
+       if [ x"$user" = x"" ]; then
+               user=`finger| grep -m1 ":$displaynum" | awk '{print $1}'`
+       fi
+       if [ x"$user" != x"" ]; then
+               userhome=`getent passwd $user | cut -d: -f6`
+               export XAUTHORITY=$userhome/.Xauthority
+       else
+               export XAUTHORITY=""
+       fi
+}
+# end of getXuser from /usr/share/acpi-support/power-funcs
+#
+for x in /tmp/.X11-unix/*; do
+   displaynum=`echo $x | sed s#/tmp/.X11-unix/X##`
+   getXuser;
+   if [ x"$XAUTHORITY" != x"" ]; then
+       export DISPLAY=":$displaynum"
+      screen_toggle
+   fi
+done
+ 
+# What should we do?
+DO="$1"
+if [ -z "$DO" ]; then
+       if [ $(basename $0) = "screen" ]; then
+               DO="toggle"
+       fi
+fi
+ 
+case "$DO" in
+       toggle)
+               screen_toggle
+               ;;
+       internal)
+               screen_internal
+               ;;
+       external)
+               screen_external
+               ;;
+       mirror)
+               screen_mirror
+               ;;
+       both)
+               screen_both
+               ;;
+       status)
+               echo "Current Fn-F7 state is: $STATE"
+               echo
+               echo "Attached monitors:"
+               $SU xrandr | grep "\Wconnected" | sed "s/^/ /"
+               ;;
+       *)
+               echo "usage: $0 <command>" >&2
+               echo >&2
+               echo "  commands:" >&2
+               echo "          status" >&2
+               echo "          internal" >&2
+               echo "          external" >&2
+               echo "          mirror" >&2
+               echo "          both" >&2
+               echo "          toggle" >&2
+               echo >&2
+               ;;
+esac
+ 

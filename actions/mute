@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. /etc/acpi/actions/osd
+
+amixer set PCM 0%
+osd "Mute"

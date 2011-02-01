@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. /etc/acpi/actions/osd
+
+if [ "up" == $1 ]; then
+	VOL=`amixer set PCM 2dB+ unmute`
+fi
+
+if [ "down" == $1 ]; then
+	VOL=`amixer set PCM 2dB- unmute`
+fi
+
+PERC=`echo $VOL | grep 'Front Left:' | grep -o '[[:digit:]]*%' | grep -o '[[:digit:]]*'`
+
+
+progress $PERC "Volume" 

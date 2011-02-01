@@ -1,0 +1,16 @@
+#!/bin/bash
+
+. /etc/acpi/actions/osd
+
+if [ "up" == "$1" ]; then
+	echo "up" > /proc/acpi/ibm/brightness
+else
+	echo "down" > /proc/acpi/ibm/brightness
+fi
+
+CUR=`cat /proc/acpi/ibm/brightness | grep level: | cut -f3`
+PERC=`awk "BEGIN{print 6.66667 * $CUR}"`
+
+progress $PERC "Brightness"
+
+

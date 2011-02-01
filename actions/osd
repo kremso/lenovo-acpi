@@ -1,0 +1,9 @@
+
+osd() {
+	echo "$1" | osd_cat -d 1 -c green --font="-*-times-bold-r-*--40-40-*-*-*-*-*-*" -A center -p bottom
+}
+
+progress() {
+	killall osd_cat
+	osd_cat -b 'percentage' -P $1 -T $2 -A center -p bottom -o 50 -w -d 1
+}
